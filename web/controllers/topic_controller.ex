@@ -2,6 +2,9 @@ defmodule Discuss.TopicController do
   use Discuss.Web, :controller
   alias Discuss.Topic
 
+  plug Discuss.Plugs.RequireAuth when action in [:create, :new, :edit, :update , :delete ]
+  plug :check_owner when action in [:edit,:update, :delete]
+
   def new(conn, _params) do
     changeset = Topic.changeset(%Topic{})
     render conn , "new.html", changeset: changeset
@@ -9,6 +12,11 @@ defmodule Discuss.TopicController do
 
   def create(conn, %{"topic"=> topic}) do
     changeset  = Topic.changeset(%Topic{},topic)
+
+    changeset = conn.assigns.user
+    |>build_assoc(:topics)
+    |>Topic.changeset(topic)
+
     case Repo.insert(changeset) do
       {:ok, _topic} ->
         conn
@@ -55,6 +63,13 @@ defmodule Discuss.TopicController do
    |>redirect(to: topic_path(conn, :index))
  end
 
+ def show(conn, %{"id" => topic_id}) do
+   topic = Repo.get!(Topic, topic_id)
+   render conn, "show.html", topic: topic
+ end
+
+
+
 
   def list(conn, _params) do
     #list = Repo.all(Topic)
@@ -63,20 +78,16 @@ defmodule Discuss.TopicController do
     json conn , map
   end
 
+ def check_owner(conn,_params) do
+   %{params: %{"id" => topic_id}} = conn
 
-
-
-  defimpl Poison.Encoder, for: Any do
-    def encode(%{__struct__: _} = struct, options) do
-      map = struct
-            |> Map.from_struct
-            |> sanitize_map
-      Poison.Encoder.Map.encode(map, options)
-    end
-
-    defp sanitize_map(map) do
-      Map.drop(map, [:__meta__, :__struct__])
-    end
-  end
-
+   if Repo.get(Topic, topic_id).user_id == conn.assigns.user.id do
+     conn
+   else
+     conn
+     |>put_flash(:error, "You don't have permission")
+     |>redirect(to: topic_path(conn, :index))
+     |>halt()
+   end
+ end
 end

@@ -40,9 +40,7 @@ defmodule Discuss.Mixfile do
      {:cowboy, "~> 1.0"},
      {:ueberauth, "~> 0.3"},
      {:ueberauth_github, "~> 0.4"},
-     {:poison, "~> 3.0", override: true}
-   ]
-
+     {:poison, "~> 3.0", override: true}]
   end
 
   # Aliases are shortcuts or tasks specific to the current project.
